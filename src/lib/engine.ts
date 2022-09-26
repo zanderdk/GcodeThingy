@@ -12,6 +12,9 @@ enum BlockType {
     Start,
     Basic,
     Toolchange,
+    LoopStart,
+    LoopEnd,
+    Custom,
     End
 }
 class Block {
@@ -20,6 +23,12 @@ class Block {
 
     constructor(l: Line[] = []) {
         this.lines = l;
+    }
+
+    public toString(): string {
+        return this.lines
+            .map((l: Line) => l.line)
+            .join("\n")
     }
 };
 class BasicBlock extends Block {
@@ -34,6 +43,18 @@ class StartBlock extends Block {
     type: BlockType = BlockType.Start;
 }
 
+class LoopStartBlock extends Block {
+    type: BlockType = BlockType.LoopStart;
+}
+
+class LoopEndBlock extends Block {
+    type: BlockType = BlockType.LoopEnd;
+}
+
+class CustomBlock extends Block {
+    type: BlockType = BlockType.Custom;
+}
+
 class EndBlock extends Block {
     type: BlockType = BlockType.End;
 }
@@ -41,6 +62,19 @@ class EndBlock extends Block {
 class Routine {
     name: string | null;
     blocks: Block[];
+
+    public toString(): string {
+        return `%\nO${this.name}\n` +
+        this.blocks
+            .map((b: Block) => b.toString() + "\n")
+            .join("\n") +
+            "%"
+    }
+
+    constructor(n: string | null = null, b: Block[] = []) {
+        this.name = n;
+        this.blocks = b;
+    }
 }
 
 export function preprocess(program: string): string {
@@ -108,7 +142,8 @@ export function parseLines(p: string): Line[] {
 }
 
 export function parseGcode(progStr: string): Routine {
-    let gcode = parseLines(progStr);
+    let preProcessed = preprocess(progStr);
+    let gcode = parseLines(preProcessed);
     let prog = splitBlocks(gcode);
     prog = splitStartAndEndBlock(prog);
     let name = "0001"
@@ -181,5 +216,73 @@ export function splitBlocks(lines: Line[]): Routine {
             cur_block.lines.push(line);
     }
     rest.push(cur_block);
-    return {name: null, blocks: rest};
+    return new Routine(null, rest);
+}
+
+export function getBiggest(prog: Routine): [number, number] { //var, lable
+    return [1, 2000];
+}
+
+export function addCnstomGcode(prog: Routine, beforeLoop: string, afterLoop: string): Routine {
+    return prog;
+}
+
+export function inesertAfterEvery(prog: Routine, gcodes: string, after: BlockType, inputType: BlockType = BlockType) {
+    return prog;
+}
+
+export function multiply(prog: Routine, amountX: number, amountY: number, pitchX: number, pitchY: number): Routine {
+    const zeroPad = (num, places) => String(num).padStart(places, '0')
+
+    let [nextVar, nextLabel] = getBiggest(prog);
+    nextVar += 1;
+    nextLabel += 1;
+
+    let yCounter = zeroPad(nextVar++, 1);
+    let xCounter = zeroPad(nextVar++, 1);
+    let tmpY = zeroPad(nextVar++, 1);
+    let tmpX = zeroPad(nextVar++, 1);
+
+    let loopY = zeroPad(nextLabel++, 4);
+    let loopX = zeroPad(nextLabel++, 4);
+
+    let startLoop: string =
+                            `#${yCounter}=0\n`                      +
+                            `N${loopY}\n`                           +
+                            `#${tmpY}=[#${yCounter}*${pitchY}]\n`   +
+                            `#${xCounter}=0\n`                      +
+                            `N${loopX}\n`                           +
+                            `#${tmpX}=[#${xCounter}*${pitchX}]\n`   +
+                            `G52X#${tmpX}Y#${tmpY}\n`;
+
+    let endLoop: string =
+                            `#${xCounter}=[#${xCounter}+1]\n`               +
+                            `IF[#${xCounter}LT${amountX}]GOTO${loopX}\n`    +
+                            `#${yCounter}=[#${yCounter}+1]\n`               +
+                            `IF[#${yCounter}LT${amountY}]GOTO${loopY}\n`;
+
+    for (let block of prog.blocks) {
+        if (block.type === BlockType.Basic) {
+            let startLines = parseLines(preprocess(startLoop));
+            let endLines = parseLines(preprocess(endLoop));
+            block.lines = startLines.concat( block.lines.concat(endLines) );
+        }
+    }
+
+    for (let block of prog.blocks) {
+        if (block.type === BlockType.Start) {
+            let tmp = parseLines(preprocess(`G52X0Y0Z0\n`));
+            block.lines.push(tmp[0]);
+            break;
+        }
+    }
+
+    for (let block of prog.blocks) {
+        if (block.type === BlockType.End) {
+            let tmp = parseLines(preprocess(`G52X0Y0Z0\n`));
+            block.lines.unshift(tmp[0]);
+            break;
+        }
+    }
+    return prog;
 }
