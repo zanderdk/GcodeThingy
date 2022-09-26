@@ -95,7 +95,7 @@ export function parseLines(p: string): Line[] {
         const lexingResult: LexingResult = lexer.tokenize(input);
         lexingResult.tokens.forEach((x: Token) => {
             let image = x.image;
-            if (x.tokenType.name === "command" && x.image[0] == 'G') {
+            if (x.tokenType.name === "command") {
                 let nr = +(image.slice(1))
                 image = image[0] + nr.toString();
                 x.image = image;
@@ -170,7 +170,7 @@ export function splitBlocks(lines: Line[]): Routine {
                 rest.push(cur_block);
                 cur_block = new ToolchangeBlock();
             }
-            else if (image === "M3" || image === "M4") {
+            else if ((image === "M3" || image === "M4") && cur_block.type == BlockType.Toolchange) {
                 cur_block.lines.push(line);
                 rest.push(cur_block);
                 cur_block = new BasicBlock();
