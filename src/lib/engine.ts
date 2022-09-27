@@ -45,10 +45,47 @@ class StartBlock extends Block {
 
 class LoopStartBlock extends Block {
     type: BlockType = BlockType.LoopStart;
+    line: number | null = null; //TODO: kinda hack here
+
+    public toString(): string {
+        const hashPlaceHolder = (l: Line) => { return l.line.includes("(PLACE_HOLDER)") };
+        const zeroPad = (num: number, places: number) => String(num).padStart(places, '0')
+        let st: string = "";
+
+        for (let line of this.lines) {
+            let x = hashPlaceHolder(line);
+            if (!x) {
+                st += line.line;
+            } else {
+                st += `N${zeroPad(this.line, 4)}`;
+                this.line += 1;
+            }
+            st += "\n";
+        }
+        return st;
+    }
 }
 
 class LoopEndBlock extends Block {
     type: BlockType = BlockType.LoopEnd;
+    line: number | null = null;
+
+    public toString(): string {
+        const hashPlaceHolder = (l: Line) => { return l.line.includes("(PLACE_HOLDER)") };
+        const zeroPad = (num: number, places: number) => String(num).padStart(places, '0')
+        let st: string = "";
+
+        for (let line of this.lines) {
+            if (!hashPlaceHolder(line)) {
+                st += line.line;
+            } else {
+                st += line.line.replace("(PLACE_HOLDER)", zeroPad(this.line ^ 1, 4));
+                this.line += 1;
+            }
+            st += "\n";
+        }
+        return st;
+    }
 }
 
 class CustomBlock extends Block {
@@ -62,12 +99,14 @@ class EndBlock extends Block {
 export class Routine {
     name: string | null;
     blocks: Block[];
+    nextLineNumber: number | null = null;
+    nextVariable: number | null = null;
 
     public toString(): string {
         return `%\nO${this.name}\n` +
-        this.blocks
-            .map((b: Block) => b.toString() + "\n")
-            .join("\n") +
+            this.blocks
+                .map((b: Block) => b.toString() + "\n")
+                .join("\n") +
             "%"
     }
 
@@ -77,7 +116,7 @@ export class Routine {
     }
 }
 
-export function preprocess(program: string): string {
+export function preprocess(program: string, remove_comments: boolean = true): string {
     const gcode_strings = program.toLocaleUpperCase().split("\n");
     const gcodes: string[] = gcode_strings
         .map((x: string) => x.trim())
@@ -86,7 +125,7 @@ export function preprocess(program: string): string {
         .map((x: string) => x.split(";")[0])
         .filter((x: string) => x!!);
 
-    const noComents = []
+    let noComents = []
     for (let line of gcodes) {
         while (line.indexOf("(") != -1) {
             let start = line.indexOf("(");
@@ -94,6 +133,10 @@ export function preprocess(program: string): string {
             line = line.slice(0, start) + line.slice(end + 1)
         }
         noComents.push(line);
+    }
+
+    if (!remove_comments) {
+        noComents = gcodes;
     }
 
     return noComents
@@ -108,8 +151,10 @@ function createLexer() {
     const lables = chevrotain.createToken({ name: "label", pattern: /[N,O]\d+/ });
     const expression_1 = chevrotain.createToken({ name: "expression", pattern: /[A-Z][A-Z]+.*/ });
     const expression_2 = chevrotain.createToken({ name: "expression", pattern: /.*#.*/ });
+    const comment = chevrotain.createToken({ name: "expression", pattern: /\([A-Z]+\)/ });
 
     const allTokens = [
+        comment,
         expression_1,
         expression_2,
         lables,
@@ -123,7 +168,7 @@ function createLexer() {
 }
 
 export function parseLines(p: string): Line[] {
-    const prog = preprocess(p);
+    const prog = p;
     const inputTexts = prog.split("\n");
     const lexer = createLexer();
     const res: Line[] = []
@@ -221,8 +266,17 @@ export function splitBlocks(lines: Line[]): Routine {
     return new Routine(null, rest);
 }
 
+function getBiggestVariable(prog: Routine): number {
+    return 1;
+}
+function getBiggestLineNumber(prog: Routine): number {
+    return 1;
+}
+
 export function getBiggest(prog: Routine): [number, number] { //var, lable
-    return [1, 2000]; //TODO implement this
+    let variableNum = (prog.nextVariable === null) ? getBiggestVariable(prog) : prog.nextVariable;
+    let lineNum = (prog.nextLineNumber === null) ? getBiggestLineNumber(prog) : prog.nextLineNumber;
+    return [variableNum, lineNum]; //TODO implement this
 }
 
 export function insertCustomGcodeBefore(prog: Routine, code: string, t: BlockType): Routine {
@@ -241,7 +295,7 @@ export function insertCustomGcodeAfter(prog: Routine, code: string, t: BlockType
 
 export function inesertAfter(prog: Routine, block: Block, afterType: BlockType): Routine {
     let blocks: Block[] = prog.blocks
-        .map( (b: Block) => (b.type === afterType)? [b, block] : [b] )
+        .map((b: Block) => (b.type === afterType) ? [b, block] : [b])
         .flat();
     prog.blocks = blocks;
     return prog;
@@ -249,7 +303,7 @@ export function inesertAfter(prog: Routine, block: Block, afterType: BlockType):
 
 export function inesertBefore(prog: Routine, block: Block, beforeType: BlockType): Routine {
     let blocks: Block[] = prog.blocks
-        .map( (b: Block) => (b.type === beforeType)? [block, b] : [b] )
+        .map((b: Block) => (b.type === beforeType) ? [block, b] : [b])
         .flat();
     prog.blocks = blocks;
     return prog;
@@ -257,39 +311,44 @@ export function inesertBefore(prog: Routine, block: Block, beforeType: BlockType
 
 export function multiply(prog: Routine, amountX: number, amountY: number, pitchX: number, pitchY: number): Routine {
     const zeroPad = (num: number, places: number) => String(num).padStart(places, '0')
+    const roundOffTo = (num, factor = 1) => {
+        const quotient = num / factor;
+        const res = Math.ceil(quotient) * factor;
+        return res;
+    };
 
     let [nextVar, nextLabel] = getBiggest(prog);
-    nextVar += 1;
-    nextLabel += 1;
+    nextLabel = roundOffTo(nextLabel, 1000);
 
     let yCounter = zeroPad(nextVar++, 1);
     let xCounter = zeroPad(nextVar++, 1);
     let tmpY = zeroPad(nextVar++, 1);
     let tmpX = zeroPad(nextVar++, 1);
 
-    let loopY = zeroPad(nextLabel++, 4);
-    let loopX = zeroPad(nextLabel++, 4);
+    let loopY = nextLabel;
 
     let startLoop: string =
-                            `#${yCounter}=0\n`                      +
-                            `N${loopY}\n`                           +
-                            `#${tmpY}=[#${yCounter}*${pitchY}]\n`   +
-                            `#${xCounter}=0\n`                      +
-                            `N${loopX}\n`                           +
-                            `#${tmpX}=[#${xCounter}*${pitchX}]\n`   +
-                            `G52X#${tmpX}Y#${tmpY}\n`;
+        `#${yCounter}=0\n` +
+        `N(PLACE_HOLDER)\n` +
+        `#${tmpY}=[#${yCounter}*${pitchY}]\n` +
+        `#${xCounter}=0\n` +
+        `N(PLACE_HOLDER)\n` +
+        `#${tmpX}=[#${xCounter}*${pitchX}]\n` +
+        `G52X#${tmpX}Y#${tmpY}\n`;
 
     let endLoop: string =
-                            `#${xCounter}=[#${xCounter}+1]\n`               +
-                            `IF[#${xCounter}LT${amountX}]GOTO${loopX}\n`    +
-                            `#${yCounter}=[#${yCounter}+1]\n`               +
-                            `IF[#${yCounter}LT${amountY}]GOTO${loopY}\n`;
+        `#${xCounter}=[#${xCounter}+1]\n` +
+        `IF[#${xCounter}LT${amountX}]GOTO(PLACE_HOLDER)\n` +
+        `#${yCounter}=[#${yCounter}+1]\n` +
+        `IF[#${yCounter}LT${amountY}]GOTO(PLACE_HOLDER)\n`;
 
 
-    let loopBeginBlock = new LoopStartBlock(parseLines(preprocess(startLoop)));
+    let loopBeginBlock = new LoopStartBlock(parseLines(preprocess(startLoop, false)));
+    loopBeginBlock.line = loopY;
     prog = inesertBefore(prog, loopBeginBlock, BlockType.Basic);
 
-    let loopEndBlock = new LoopEndBlock(parseLines(preprocess(endLoop)));
+    let loopEndBlock = new LoopEndBlock(parseLines(preprocess(endLoop, false)));
+    loopEndBlock.line = loopY;
     prog = inesertAfter(prog, loopEndBlock, BlockType.Basic);
 
     //insert gcode last in startBlock
