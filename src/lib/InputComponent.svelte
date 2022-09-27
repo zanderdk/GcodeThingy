@@ -1,3 +1,11 @@
+<script context="module" lang="ts">
+export enum MacroType {
+    MACRO_A = 0,
+    MACRO_B,
+    HEIDENHAIN
+}
+</script>
+
 <script lang="ts">
     import {
         NumberInput,
@@ -19,6 +27,8 @@
     export let yAmount: number;
     export let beforeLoopCode: string;
     export let afterLoopCode: string;
+
+    export let selectedMacro: MacroType;
 
     const dispatch = createEventDispatcher<{change: string}>();
     interface $$Events {
@@ -46,9 +56,9 @@
 
 <Form>
     <FormGroup legendText="Input and Generated output macro language">
-        <ContentSwitcher selectedIndex={0}>
+        <ContentSwitcher bind:selectedIndex={selectedMacro}>
+            <Switch text="Macro A" />
             <Switch text="Macro B" />
-            <Switch text="Macro A" disabled />
             <Switch text="Heidenhain" disabled />
         </ContentSwitcher>
     </FormGroup>

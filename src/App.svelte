@@ -6,7 +6,7 @@
     import obsidian from "svelte-highlight/styles/obsidian";
     import Fa from "svelte-fa";
     import { faDownload, faCopy } from "@fortawesome/free-solid-svg-icons";
-    import InputComponent from "./lib/InputComponent.svelte";
+    import InputComponent, { type MacroType } from "./lib/InputComponent.svelte";
 
     function fileChange(e: CustomEvent<string>) {
         let content: string = e.detail;
@@ -19,6 +19,7 @@
     let yAmount: number = 1;
     let beforeLoopCode: string = "";
     let afterLoopCode: string = "";
+    let selectedMacro: MacroType = 1;
 
     const code = `%O0405%`;
 </script>
@@ -36,6 +37,7 @@
         bind:yPitch
         bind:afterLoopCode
         bind:beforeLoopCode
+        bind:selectedMacro
 
         on:change={fileChange}
     />
