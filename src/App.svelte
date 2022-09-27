@@ -7,17 +7,18 @@
     import Fa from "svelte-fa";
     import { faDownload, faCopy } from "@fortawesome/free-solid-svg-icons";
     import InputComponent from "./lib/InputComponent.svelte";
-    import type {
-        FileReadFunctionType,
-    } from "./lib/InputComponent.svelte";
 
-    let onFileChange: FileReadFunctionType = (a) => console.log(a);
+    function fileChange(e: CustomEvent<string>) {
+        let content: string = e.detail;
+        console.log(content);
+    }
+
     let xPitch: number = 25;
     let yPitch: number = 25;
     let xAmount: number = 1;
     let yAmount: number = 1;
-    let beforeLoopCode: string;
-    let afterLoopCode: string;
+    let beforeLoopCode: string = "";
+    let afterLoopCode: string = "";
 
     const code = `%O0405%`;
 </script>
@@ -33,9 +34,10 @@
         bind:yAmount
         bind:xPitch
         bind:yPitch
-        bind:onFileChange
         bind:afterLoopCode
         bind:beforeLoopCode
+
+        on:change={fileChange}
     />
     <h2 style="padding-bottom: 1.5rem;">Output</h2>
 

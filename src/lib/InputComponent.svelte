@@ -1,7 +1,3 @@
-<script context="module" lang="ts">
-    export type FileReadFunctionType = (a: string) => any;
-</script>
-
 <script lang="ts">
     import {
         NumberInput,
@@ -15,15 +11,19 @@
         Switch,
         FileUploaderDropContainer,
     } from "carbon-components-svelte";
+    import { createEventDispatcher } from "svelte";
 
-
-    export let onFileChange: FileReadFunctionType;
     export let xPitch: number;
     export let yPitch: number;
     export let xAmount: number;
     export let yAmount: number;
     export let beforeLoopCode: string;
     export let afterLoopCode: string;
+
+    const dispatch = createEventDispatcher<{change: string}>();
+    interface $$Events {
+        change: CustomEvent<string>;
+    }
 
     async function GetFileData(file: File): Promise<string> {
         let p: Promise<string> = new Promise((res, _) => {
@@ -40,7 +40,7 @@
     async function fileChange(a: CustomEvent<ReadonlyArray<File>>) {
         //TODO file size check
         let content: string = await GetFileData(a.detail[0]);
-        onFileChange(content);
+        dispatch("change", content);
     }
 </script>
 
