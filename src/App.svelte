@@ -33,7 +33,7 @@
             .map(parseGcode)
             .map((gc) => multiply(gc, xAmount, yAmount, xPitch, yPitch))
             .map((gc) =>
-                insertCustomGcodeBefore(gc, beforeLoopCode, BlockType.LoopStart)
+                insertCustomGcodeAfter(gc, beforeLoopCode, BlockType.LoopStart)
             )
             .map((gc) =>
                 insertCustomGcodeBefore(gc, afterLoopCode, BlockType.LoopEnd)
