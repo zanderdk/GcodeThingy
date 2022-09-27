@@ -21,7 +21,7 @@
 
     let content: string = "";
 
-    $: routine = outputUpdate(content, xAmount, yAmount, xPitch, yPitch, beforeLoopCode, afterLoopCode);
+    $: routine = (content.trim())? outputUpdate(content, xAmount, yAmount, xPitch, yPitch, beforeLoopCode, afterLoopCode) : null;
 
     function onChange(e: CustomEvent<string>) {
         content = e.detail;
@@ -36,9 +36,6 @@
         _beforeLoopCode: string,
         _afterLoopCode: string
     ): Routine {
-        if (!content) {
-            return null;
-        }
         let gcode = [_content]
             .map(parseGcode)
             .map((gc) => multiply(gc, _xAmount, _yAmount, _xPitch, _yPitch))
