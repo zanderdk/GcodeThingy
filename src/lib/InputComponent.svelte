@@ -57,7 +57,7 @@ export enum MacroType {
 <Form>
     <FormGroup legendText="Input and Generated output macro language">
         <ContentSwitcher bind:selectedIndex={selectedMacro}>
-            <Switch text="Macro A" />
+            <Switch text="Macro A" disabled />
             <Switch text="Macro B" />
             <Switch text="Heidenhain" disabled />
         </ContentSwitcher>
