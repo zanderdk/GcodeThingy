@@ -22,6 +22,8 @@
     export let yPitch: number;
     export let xAmount: number;
     export let yAmount: number;
+    export let beforeLoopCode: string;
+    export let afterLoopCode: string;
 
     async function GetFileData(file: File): Promise<string> {
         let p: Promise<string> = new Promise((res, _) => {
@@ -87,12 +89,14 @@
                     <TextArea
                         helperText="Runs before every loop"
                         placeholder="Some Gcode here"
+                        bind:value={beforeLoopCode}
                     />
                 </Column>
                 <Column>
                     <TextArea
                         helperText="Runs after every loop"
                         placeholder="Some Gcode here"
+                        bind:value={afterLoopCode}
                     />
                 </Column>
             </Row>
