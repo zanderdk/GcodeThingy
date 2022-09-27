@@ -7,11 +7,7 @@ class Line {
     line: string;
     tokens: Token[];
 }
-enum DirectionType {
-    Before = 0,
-    After,
-}
-enum BlockType {
+export enum BlockType {
     NullType = 0,
     Start,
     Basic,
@@ -63,7 +59,7 @@ class EndBlock extends Block {
     type: BlockType = BlockType.End;
 }
 
-class Routine {
+export class Routine {
     name: string | null;
     blocks: Block[];
 
@@ -229,15 +225,17 @@ export function getBiggest(prog: Routine): [number, number] { //var, lable
     return [1, 2000]; //TODO implement this
 }
 
-export function insertCustomGcodeBefore(prog: routine, code: string, t: blocktype): Routine {
+export function insertCustomGcodeBefore(prog: Routine, code: string, t: BlockType): Routine {
     let customBlock = new LoopStartBlock(parseLines(preprocess(code)));
-    prog = inesertBefore(prog, customBlock, t);
+    if (code)
+        prog = inesertBefore(prog, customBlock, t);
     return prog;
 }
 
-export function insertCustomGcodeAfter(prog: routine, code: string, t: blocktype): Routine {
+export function insertCustomGcodeAfter(prog: Routine, code: string, t: BlockType): Routine {
     let customBlock = new LoopStartBlock(parseLines(preprocess(code)));
-    prog = inesertAfter(prog, customBlock, t);
+    if (code)
+        prog = inesertAfter(prog, customBlock, t);
     return prog;
 }
 
