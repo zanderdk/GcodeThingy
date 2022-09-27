@@ -11,8 +11,6 @@
     } from "./lib/engine";
     import { BlockType, Routine } from "./lib/engine";
 
-    export let routine: Routine | null = null;
-
     let xPitch: number = 25;
     let yPitch: number = 25;
     let xAmount: number = 1;
@@ -23,7 +21,7 @@
 
     let content: string = "";
 
-    $: outputUpdate(content, xAmount, yAmount, xPitch, yPitch, beforeLoopCode, afterLoopCode);
+    $: routine = outputUpdate(content, xAmount, yAmount, xPitch, yPitch, beforeLoopCode, afterLoopCode);
 
     function onChange(e: CustomEvent<string>) {
         content = e.detail;
@@ -37,9 +35,9 @@
         _yPitch: number,
         _beforeLoopCode: string,
         _afterLoopCode: string
-    ) {
+    ): Routine {
         if (!content) {
-            return;
+            return null;
         }
         let gcode = [_content]
             .map(parseGcode)
@@ -51,8 +49,8 @@
                 insertCustomGcodeBefore(gc, _afterLoopCode, BlockType.LoopEnd)
             )[0];
 
-        routine = gcode;
         console.debug("generated:", routine);
+        return gcode;
     }
 </script>
 
