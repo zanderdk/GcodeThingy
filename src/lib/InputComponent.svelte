@@ -1,3 +1,7 @@
+<script context="module" lang="ts">
+    export type FileReadFunctionType = (a: string) => any;
+</script>
+
 <script lang="ts">
     import {
         NumberInput,
@@ -5,14 +9,19 @@
         Row,
         Column,
         Form,
-        Button,
-        ButtonSet,
         TextArea,
         FormGroup,
         ContentSwitcher,
         Switch,
         FileUploaderDropContainer,
     } from "carbon-components-svelte";
+
+
+    export let onFileChange: FileReadFunctionType;
+    export let xPitch: number;
+    export let yPitch: number;
+    export let xAmount: number;
+    export let yAmount: number;
 
     async function GetFileData(file: File): Promise<string> {
         let p: Promise<string> = new Promise((res, _) => {
@@ -29,7 +38,7 @@
     async function fileChange(a: CustomEvent<ReadonlyArray<File>>) {
         //TODO file size check
         let content: string = await GetFileData(a.detail[0]);
-        console.log(content);
+        onFileChange(content);
     }
 </script>
 
@@ -37,24 +46,36 @@
     <FormGroup legendText="Input and Generated output macro language">
         <ContentSwitcher selectedIndex={0}>
             <Switch text="Macro B" />
-            <Switch text="Macro A" />
-            <Switch text="Heidenhain (not implemented yet)" disabled />
+            <Switch text="Macro A" disabled />
+            <Switch text="Heidenhain" disabled />
         </ContentSwitcher>
     </FormGroup>
     <FormGroup legendText="Axis multiplier controls">
         <Grid padding={false} noGutter={true}>
             <Row>
                 <Column>
-                    <NumberInput value={1} helperText="X axis multiplier" />
+                    <NumberInput
+                        bind:value={xAmount}
+                        helperText="X axis multiplier"
+                    />
                 </Column>
                 <Column>
-                    <NumberInput value={25} helperText="X axis pitch" />
+                    <NumberInput
+                        bind:value={xPitch}
+                        helperText="X axis pitch"
+                    />
                 </Column>
                 <Column>
-                    <NumberInput value={1} helperText="Y axis multiplier" />
+                    <NumberInput
+                        bind:value={yAmount}
+                        helperText="Y axis multiplier"
+                    />
                 </Column>
                 <Column>
-                    <NumberInput value={25} helperText="Y axis pitch" />
+                    <NumberInput
+                        bind:value={yPitch}
+                        helperText="Y axis pitch"
+                    />
                 </Column>
             </Row>
         </Grid>
