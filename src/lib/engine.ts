@@ -7,6 +7,10 @@ class Line {
     line: string;
     tokens: Token[];
 }
+enum DirectionType {
+    Before = 0,
+    After,
+}
 enum BlockType {
     NullType = 0,
     Start,
@@ -116,7 +120,9 @@ function createLexer() {
         command,
         parameter
     ]
-    let lexer = new chevrotain.Lexer(allTokens)
+    let lexer = new chevrotain.Lexer(allTokens, {
+        positionTracking: "onlyOffset"
+    })
     return lexer;
 }
 
@@ -220,19 +226,39 @@ export function splitBlocks(lines: Line[]): Routine {
 }
 
 export function getBiggest(prog: Routine): [number, number] { //var, lable
-    return [1, 2000];
+    return [1, 2000]; //TODO implement this
 }
 
-export function addCnstomGcode(prog: Routine, beforeLoop: string, afterLoop: string): Routine {
+export function insertCustomGcodeBefore(prog: routine, code: string, t: blocktype): Routine {
+    let customBlock = new LoopStartBlock(parseLines(preprocess(code)));
+    prog = inesertBefore(prog, customBlock, t);
     return prog;
 }
 
-export function inesertAfterEvery(prog: Routine, gcodes: string, after: BlockType, inputType: BlockType = BlockType) {
+export function insertCustomGcodeAfter(prog: routine, code: string, t: blocktype): Routine {
+    let customBlock = new LoopStartBlock(parseLines(preprocess(code)));
+    prog = inesertAfter(prog, customBlock, t);
+    return prog;
+}
+
+export function inesertAfter(prog: Routine, block: Block, afterType: BlockType): Routine {
+    let blocks: Block[] = prog.blocks
+        .map( (b: Block) => (b.type === afterType)? [b, block] : [b] )
+        .flat();
+    prog.blocks = blocks;
+    return prog;
+}
+
+export function inesertBefore(prog: Routine, block: Block, beforeType: BlockType): Routine {
+    let blocks: Block[] = prog.blocks
+        .map( (b: Block) => (b.type === beforeType)? [block, b] : [b] )
+        .flat();
+    prog.blocks = blocks;
     return prog;
 }
 
 export function multiply(prog: Routine, amountX: number, amountY: number, pitchX: number, pitchY: number): Routine {
-    const zeroPad = (num, places) => String(num).padStart(places, '0')
+    const zeroPad = (num: number, places: number) => String(num).padStart(places, '0')
 
     let [nextVar, nextLabel] = getBiggest(prog);
     nextVar += 1;
@@ -261,14 +287,14 @@ export function multiply(prog: Routine, amountX: number, amountY: number, pitchX
                             `#${yCounter}=[#${yCounter}+1]\n`               +
                             `IF[#${yCounter}LT${amountY}]GOTO${loopY}\n`;
 
-    for (let block of prog.blocks) {
-        if (block.type === BlockType.Basic) {
-            let startLines = parseLines(preprocess(startLoop));
-            let endLines = parseLines(preprocess(endLoop));
-            block.lines = startLines.concat( block.lines.concat(endLines) );
-        }
-    }
 
+    let loopBeginBlock = new LoopStartBlock(parseLines(preprocess(startLoop)));
+    prog = inesertBefore(prog, loopBeginBlock, BlockType.Basic);
+
+    let loopEndBlock = new LoopEndBlock(parseLines(preprocess(endLoop)));
+    prog = inesertAfter(prog, loopEndBlock, BlockType.Basic);
+
+    //insert gcode last in startBlock
     for (let block of prog.blocks) {
         if (block.type === BlockType.Start) {
             let tmp = parseLines(preprocess(`G52X0Y0Z0\n`));
@@ -277,6 +303,7 @@ export function multiply(prog: Routine, amountX: number, amountY: number, pitchX
         }
     }
 
+    //insert gcode first in EndBlock
     for (let block of prog.blocks) {
         if (block.type === BlockType.End) {
             let tmp = parseLines(preprocess(`G52X0Y0Z0\n`));
