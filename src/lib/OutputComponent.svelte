@@ -1,21 +1,32 @@
 <script lang="ts">
     import Fa from "svelte-fa";
     import { faDownload, faCopy } from "@fortawesome/free-solid-svg-icons";
-    import { Button, ButtonSet } from "carbon-components-svelte";
+    import {
+        Button,
+        ButtonSet,
+        ComposedModal,
+        ModalHeader,
+    } from "carbon-components-svelte";
     import gcode from "svelte-highlight/languages/typescript";
     import Highlight from "svelte-highlight";
     import { Routine } from "./types";
 
+    let modalOpen = false;
+
     export let routine: Routine | null = null;
     $: code = routine ? routine.toString() : "";
+
+    let modalText = "";
 
     function copy(text: string) {
         navigator.clipboard.writeText(text).then(
             function () {
-                console.log("Async: Copying to clipboard was successful!");
+                modalText = "Gcode copied to clipboard";
+                modalOpen = true;
             },
             function (err) {
-                console.error("Async: Could not copy text: ", err);
+                modalText = "Gcode could not be copied to clipboard";
+                modalOpen = true;
             }
         );
     }
@@ -44,7 +55,6 @@
         }
         download("output.nc", code);
     }
-
 </script>
 
 {#if code}
@@ -59,3 +69,7 @@
     <br />
     <Highlight language={gcode} {code} />
 {/if}
+
+<ComposedModal bind:open={modalOpen}>
+    <ModalHeader title={modalText} />
+</ComposedModal>
