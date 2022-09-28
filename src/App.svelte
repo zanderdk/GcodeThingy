@@ -36,7 +36,6 @@
               selectedMacro
           )
         : null;
-    $: !routine ? 0 : console.debug("generated:", routine);
     $: originalCode = content.trim() ? parseGcode(content) : null;
 
     function onChange(e: CustomEvent<string>) {
@@ -81,6 +80,7 @@
                         BlockType.LoopEnd
                     )
                 )[0];
+            console.debug("generating:", gcode);
             return gcode;
         }
         let gcode = [routine]
@@ -101,6 +101,8 @@
             .map((gc) =>
                 insertCustomGcodeBefore(gc, _afterLoopCode, BlockType.LoopEnd)
             )[0];
+
+        console.debug("updating:", gcode);
         return gcode;
     }
 </script>
@@ -124,17 +126,12 @@
     <Grid>
         <Row>
             <Column>
-                {#if originalCode}
-                    <h2 style="padding-bottom: 1.5rem;">Input</h2>
-                    <OutputComponent bind:routine={originalCode} />
-                {/if}
+                <h2 style="padding-bottom: 1.5rem;">Input</h2>
+                <OutputComponent bind:routine={originalCode} />
             </Column>
-
             <Column>
-                {#if routine}
-                    <h2 style="padding-bottom: 1.5rem;">Output</h2>
-                    <OutputComponent bind:routine />
-                {/if}
+                <h2 style="padding-bottom: 1.5rem;">Output</h2>
+                <OutputComponent bind:routine />
             </Column>
         </Row>
     </Grid>

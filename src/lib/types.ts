@@ -49,7 +49,8 @@ export class Block {
                     throw new Error(`No placeholder func to correct line ${line.line}`);
                 }
 
-                line.line = this.placholderFunc(this, line);
+                st += this.placholderFunc(this, line) + "\n";
+                continue;
             }
             if (line.line.trim())
                 st += line.line + "\n";
@@ -94,6 +95,7 @@ export class Routine {
     nextVariable: number | null = null;
 
     public toString(): string {
+        console.debug("toString from Routine");
         return `%\nO${this.name}\n` +
             this.blocks
                 .map((b: Block) => b.toString())

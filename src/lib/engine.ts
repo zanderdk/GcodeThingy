@@ -46,7 +46,7 @@ export function parseGcode(progStr: string): Routine {
 export function splitStartAndEndBlock(prog: Routine): Routine {
     let lastBlock: BasicBlock = _.last(prog.blocks) as BasicBlock;
 
-    if (lastBlock.type !== BlockType.Basic) {
+    if (lastBlock.type !== BlockType.Basic && lastBlock.type !== BlockType.Toolchange) {
         throw new Error('Last block is not a Basic Block');
     }
 
