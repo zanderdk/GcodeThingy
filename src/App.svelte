@@ -3,12 +3,12 @@
     import obsidian from "svelte-highlight/styles/obsidian";
     import InputComponent from "./lib/InputComponent.svelte";
     import OutputComponent from "./lib/OutputComponent.svelte";
-    import {
-        parseGcode,
-        multiply,
-    } from "./lib/engine";
+    import { parseGcode, multiply } from "./lib/engine";
     import { BlockType, Routine, MacroType } from "./lib/types";
-    import {insertCustomGcodeBefore, insertCustomGcodeAfter} from "./lib/utils";
+    import {
+        insertCustomGcodeBefore,
+        insertCustomGcodeAfter,
+    } from "./lib/utils";
 
     let xPitch: number = 25;
     let yPitch: number = 25;
@@ -19,10 +19,21 @@
     let selectedMacro: MacroType = 1;
 
     let content: string = "";
+    let oldContent: string = "";
 
-    $: routine = (content.trim())? outputUpdate(content, xAmount, yAmount, xPitch, yPitch, beforeLoopCode, afterLoopCode, selectedMacro) : null;
-    $: (!routine)? 0 : console.debug("generated:", routine);
-
+    $: routine = content.trim()
+        ? outputUpdate(
+              content,
+              xAmount,
+              yAmount,
+              xPitch,
+              yPitch,
+              beforeLoopCode,
+              afterLoopCode,
+              selectedMacro
+          )
+        : null;
+    $: !routine ? 0 : console.debug("generated:", routine);
 
     function onChange(e: CustomEvent<string>) {
         content = e.detail;
@@ -38,16 +49,54 @@
         _afterLoopCode: string,
         _selectedMacro: MacroType
     ): Routine {
-        let gcode = [_content]
-            .map(parseGcode)
-            .map((gc) => multiply(gc, _xAmount, _yAmount, _xPitch, _yPitch, _selectedMacro))
+        if (_content != oldContent) {
+            oldContent = _content;
+            let gcode = [_content]
+                .map(parseGcode)
+                .map((gc) =>
+                    multiply(
+                        gc,
+                        _xAmount,
+                        _yAmount,
+                        _xPitch,
+                        _yPitch,
+                        _selectedMacro
+                    )
+                )
+                .map((gc) =>
+                    insertCustomGcodeAfter(
+                        gc,
+                        _beforeLoopCode,
+                        BlockType.LoopStart
+                    )
+                )
+                .map((gc) =>
+                    insertCustomGcodeBefore(
+                        gc,
+                        _afterLoopCode,
+                        BlockType.LoopEnd
+                    )
+                )[0];
+            return gcode;
+        }
+        let gcode = [routine]
+            .map((gc) =>
+                multiply(
+                    gc,
+                    _xAmount,
+                    _yAmount,
+                    _xPitch,
+                    _yPitch,
+                    _selectedMacro,
+                    true
+                )
+            )
             .map((gc) =>
                 insertCustomGcodeAfter(gc, _beforeLoopCode, BlockType.LoopStart)
             )
             .map((gc) =>
                 insertCustomGcodeBefore(gc, _afterLoopCode, BlockType.LoopEnd)
             )[0];
-
         return gcode;
     }
 </script>
