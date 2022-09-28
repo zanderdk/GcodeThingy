@@ -1,12 +1,20 @@
 export type Token = chevrotain.IToken;
 export type LexingResult = chevrotain.ILexingResult;
 
+export enum MacroType {
+    MACRO_A = 0,
+    MACRO_B,
+    HEIDENHAIN
+}
+
 export class Line {
     line: string;
     tokens: Token[];
 
     public toString() {
-        return this.line;
+        if (this.line.trim())
+            return this.line;
+        return "";
     }
 }
 
@@ -43,7 +51,8 @@ export class Block {
 
                 line.line = this.placholderFunc(this, line);
             }
-            st += line.line + "\n";
+            if (line.line.trim())
+                st += line.line + "\n";
         }
         return st;
     }
@@ -87,7 +96,7 @@ export class Routine {
     public toString(): string {
         return `%\nO${this.name}\n` +
             this.blocks
-                .map((b: Block) => b.toString() + "\n")
+                .map((b: Block) => b.toString())
                 .join("\n") +
             "%"
     }

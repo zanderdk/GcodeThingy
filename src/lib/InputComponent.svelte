@@ -1,11 +1,3 @@
-<script context="module" lang="ts">
-export enum MacroType {
-    MACRO_A = 0,
-    MACRO_B,
-    HEIDENHAIN
-}
-</script>
-
 <script lang="ts">
     import {
         NumberInput,
@@ -57,7 +49,7 @@ export enum MacroType {
 <Form>
     <FormGroup legendText="Input and Generated output macro language">
         <ContentSwitcher bind:selectedIndex={selectedMacro}>
-            <Switch text="Macro A" disabled />
+            <Switch text="Macro A" />
             <Switch text="Macro B" />
             <Switch text="Heidenhain" disabled />
         </ContentSwitcher>

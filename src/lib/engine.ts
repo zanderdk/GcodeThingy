@@ -11,10 +11,11 @@ import {
     LoopStartBlock,
     LoopEndBlock,
     EndBlock,
-    Routine
+    Routine,
+    MacroType
 } from "./types";
 
-import {preprocess, parseLines} from "./lexer";
+import { preprocess, parseLines } from "./lexer";
 import { ceilOffTo, zeroPad, inesertBefore, inesertAfter } from "./utils";
 
 export function parseGcode(progStr: string): Routine {
@@ -109,7 +110,12 @@ export function getBiggest(prog: Routine): [number, number] { //var, lable
 }
 
 
-export function multiply(prog: Routine, amountX: number, amountY: number, pitchX: number, pitchY: number): Routine {
+export function multiply(prog: Routine,
+    amountX: number,
+    amountY: number,
+    pitchX: number,
+    pitchY: number,
+    macroType: MacroType = MacroType.MACRO_B): Routine {
 
     let [nextVar, nextLabel] = getBiggest(prog);
     nextLabel = ceilOffTo(nextLabel, 1000);
@@ -135,6 +141,25 @@ export function multiply(prog: Routine, amountX: number, amountY: number, pitchX
         `IF[#${xCounter}LT${amountX}]GOTO(PLACE_HOLDER)\n` +
         `#${yCounter}=[#${yCounter}+1]\n` +
         `IF[#${yCounter}LT${amountY}]GOTO(PLACE_HOLDER)\n`;
+
+    if (macroType == MacroType.MACRO_A) {
+        startLoop =
+            `G65 H01 P${yCounter} Q0\n` +
+            `N(PLACE_HOLDER)\n` +
+            `G65 H01 P#${tmpY} Q#${yCounter}\n` +
+            `G65 H04 P#${tmpY} Q#${tmpY} R${pitchY}\n` +
+            `G65 H01 P${xCounter} Q0\n` +
+            `N(PLACE_HOLDER)\n` +
+            `G65 H01 P#${tmpX} Q#${xCounter}\n` +
+            `G65 H04 P#${tmpX} Q#${tmpX} R${pitchX}\n` +
+            `G52X#${tmpX}Y#${tmpY}\n`;
+
+        endLoop =
+            `G65 H02 P#${xCounter} Q#${xCounter} R1\n` +
+            `G65 H84 P(PLACE_HOLDER) Q#${xCounter} R${amountX}\n` +
+            `G65 H02 P#${yCounter} Q#${yCounter} R1\n` +
+            `G65 H84 P(PLACE_HOLDER) Q#${yCounter} R${amountY}\n`;
+    }
 
     let loopBeginBlock = new LoopStartBlock(parseLines(preprocess(startLoop, false)));
     loopBeginBlock.lineNumber = loopY;

@@ -1,13 +1,13 @@
 <script lang="ts">
     import "carbon-components-svelte/css/g90.css";
     import obsidian from "svelte-highlight/styles/obsidian";
-    import InputComponent, { MacroType } from "./lib/InputComponent.svelte";
+    import InputComponent from "./lib/InputComponent.svelte";
     import OutputComponent from "./lib/OutputComponent.svelte";
     import {
         parseGcode,
         multiply,
     } from "./lib/engine";
-    import { BlockType, Routine } from "./lib/types";
+    import { BlockType, Routine, MacroType } from "./lib/types";
     import {insertCustomGcodeBefore, insertCustomGcodeAfter} from "./lib/utils";
 
     let xPitch: number = 25;
@@ -20,8 +20,8 @@
 
     let content: string = "";
 
-    $: routine = (content.trim())? outputUpdate(content, xAmount, yAmount, xPitch, yPitch, beforeLoopCode, afterLoopCode) : null;
-    $: console.debug("generated:", routine);
+    $: routine = (content.trim())? outputUpdate(content, xAmount, yAmount, xPitch, yPitch, beforeLoopCode, afterLoopCode, selectedMacro) : null;
+    $: (!routine)? 0 : console.debug("generated:", routine);
 
 
     function onChange(e: CustomEvent<string>) {
@@ -35,11 +35,12 @@
         _xPitch: number,
         _yPitch: number,
         _beforeLoopCode: string,
-        _afterLoopCode: string
+        _afterLoopCode: string,
+        _selectedMacro: MacroType
     ): Routine {
         let gcode = [_content]
             .map(parseGcode)
-            .map((gc) => multiply(gc, _xAmount, _yAmount, _xPitch, _yPitch))
+            .map((gc) => multiply(gc, _xAmount, _yAmount, _xPitch, _yPitch, _selectedMacro))
             .map((gc) =>
                 insertCustomGcodeAfter(gc, _beforeLoopCode, BlockType.LoopStart)
             )
