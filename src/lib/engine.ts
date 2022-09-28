@@ -1,4 +1,4 @@
-import * as _ from 'lodash';
+import _ from 'lodash';
 
 import {
     type Token,
@@ -137,11 +137,22 @@ export function multiply(prog: Routine, amountX: number, amountY: number, pitchX
         `IF[#${yCounter}LT${amountY}]GOTO(PLACE_HOLDER)\n`;
 
     let loopBeginBlock = new LoopStartBlock(parseLines(preprocess(startLoop, false)));
-    loopBeginBlock.line = loopY;
-    prog = inesertBefore(prog, loopBeginBlock, BlockType.Basic);
+    loopBeginBlock.lineNumber = loopY;
+    loopBeginBlock.placholderFunc = (b: LoopStartBlock, l: Line) => {
+        let ret: string = l.line.replace("(PLACE_HOLDER)", zeroPad(b.lineNumber, 4));
+        b.lineNumber += 1;
+        return ret;
+    }
 
     let loopEndBlock = new LoopEndBlock(parseLines(preprocess(endLoop, false)));
-    loopEndBlock.line = loopY;
+    loopEndBlock.lineNumber = loopY;
+    loopEndBlock.placholderFunc = (b: LoopStartBlock, l: Line) => {
+        let ret: string = l.line.replace("(PLACE_HOLDER)", zeroPad(b.lineNumber ^ 1, 4));
+        b.lineNumber += 1;
+        return ret;
+    }
+
+    prog = inesertBefore(prog, loopBeginBlock, BlockType.Basic);
     prog = inesertAfter(prog, loopEndBlock, BlockType.Basic);
 
     //insert gcode last in startBlock

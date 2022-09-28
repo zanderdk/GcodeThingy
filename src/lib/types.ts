@@ -4,7 +4,14 @@ export type LexingResult = chevrotain.ILexingResult;
 export class Line {
     line: string;
     tokens: Token[];
+
+    public toString() {
+        return this.line;
+    }
 }
+
+export type PlacholderFunction = (b: Block, l: Line) => string;
+
 export enum BlockType {
     NullType = 0,
     Start,
@@ -18,15 +25,27 @@ export enum BlockType {
 export class Block {
     type: BlockType = 0;
     lines: Line[];
+    placholderFunc: PlacholderFunction | null;
 
     constructor(l: Line[] = []) {
         this.lines = l;
     }
 
     public toString(): string {
-        return this.lines
-            .map((l: Line) => l.line)
-            .join("\n")
+        const hashPlaceHolder = (l: Line) => { return l.line.includes("(PLACE_HOLDER)") };
+        let st: string = "";
+
+        for (let line of this.lines) {
+            if (hashPlaceHolder(line)) {
+                if (!this.placholderFunc) {
+                    throw new Error(`No placeholder func to correct line ${line.line}`);
+                }
+
+                line.line = this.placholderFunc(this, line);
+            }
+            st += line.line + "\n";
+        }
+        return st;
     }
 };
 export class BasicBlock extends Block {
@@ -43,47 +62,12 @@ export class StartBlock extends Block {
 
 export class LoopStartBlock extends Block {
     type: BlockType = BlockType.LoopStart;
-    line: number | null = null; //TODO: kinda hack here
-
-    public toString(): string {
-        const hashPlaceHolder = (l: Line) => { return l.line.includes("(PLACE_HOLDER)") };
-        const zeroPad = (num: number, places: number) => String(num).padStart(places, '0')
-        let st: string = "";
-
-        for (let line of this.lines) {
-            let x = hashPlaceHolder(line);
-            if (!x) {
-                st += line.line;
-            } else {
-                st += `N${zeroPad(this.line, 4)}`;
-                this.line += 1;
-            }
-            st += "\n";
-        }
-        return st;
-    }
+    lineNumber: number | null = null; //TODO: kinda hack here
 }
 
 export class LoopEndBlock extends Block {
     type: BlockType = BlockType.LoopEnd;
-    line: number | null = null;
-
-    public toString(): string {
-        const hashPlaceHolder = (l: Line) => { return l.line.includes("(PLACE_HOLDER)") };
-        const zeroPad = (num: number, places: number) => String(num).padStart(places, '0')
-        let st: string = "";
-
-        for (let line of this.lines) {
-            if (!hashPlaceHolder(line)) {
-                st += line.line;
-            } else {
-                st += line.line.replace("(PLACE_HOLDER)", zeroPad(this.line ^ 1, 4));
-                this.line += 1;
-            }
-            st += "\n";
-        }
-        return st;
-    }
+    lineNumber: number | null = null;
 }
 
 export class CustomBlock extends Block {
