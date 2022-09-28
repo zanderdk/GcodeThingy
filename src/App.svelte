@@ -6,10 +6,9 @@
     import {
         parseGcode,
         multiply,
-        insertCustomGcodeBefore,
-        insertCustomGcodeAfter,
     } from "./lib/engine";
-    import { BlockType, Routine } from "./lib/engine";
+    import { BlockType, Routine } from "./lib/types";
+    import {insertCustomGcodeBefore, insertCustomGcodeAfter} from "./lib/utils";
 
     let xPitch: number = 25;
     let yPitch: number = 25;
@@ -22,6 +21,8 @@
     let content: string = "";
 
     $: routine = (content.trim())? outputUpdate(content, xAmount, yAmount, xPitch, yPitch, beforeLoopCode, afterLoopCode) : null;
+    $: console.debug("generated:", routine);
+
 
     function onChange(e: CustomEvent<string>) {
         content = e.detail;
@@ -46,7 +47,6 @@
                 insertCustomGcodeBefore(gc, _afterLoopCode, BlockType.LoopEnd)
             )[0];
 
-        console.debug("generated:", routine);
         return gcode;
     }
 </script>

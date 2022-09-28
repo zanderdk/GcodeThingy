@@ -4,7 +4,7 @@
     import { Button, ButtonSet } from "carbon-components-svelte";
     import gcode from "svelte-highlight/languages/typescript";
     import Highlight from "svelte-highlight";
-    import { Routine } from "./engine";
+    import { Routine } from "./types";
 
     export let routine: Routine | null = null;
     $: code = routine ? routine.toString() : "";
