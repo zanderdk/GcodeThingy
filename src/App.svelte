@@ -9,7 +9,7 @@
         insertCustomGcodeBefore,
         insertCustomGcodeAfter,
     } from "./lib/engine";
-    import { BlockType, Routine } from "./lib/engine";
+    import { BlockType, Routine } from "./lib/types";
 
     let xPitch: number = 25;
     let yPitch: number = 25;
