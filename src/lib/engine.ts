@@ -1,9 +1,7 @@
-import * as chevrotain from 'chevrotain';
 import * as _ from 'lodash';
 
 import {
     type Token,
-    type LexingResult,
     Line,
     BlockType,
     Block,
@@ -12,82 +10,12 @@ import {
     StartBlock,
     LoopStartBlock,
     LoopEndBlock,
-    CustomBlock,
     EndBlock,
     Routine
 } from "./types";
 
-export function preprocess(program: string, remove_comments: boolean = true): string {
-    const gcode_strings = program.toLocaleUpperCase().split("\n");
-    const gcodes: string[] = gcode_strings
-        .map((x: string) => x.trim())
-        .map((x: string) => x.replace(/\s/g, ''))
-        .map((x: string) => x.replace(/%/g, ''))
-        .map((x: string) => x.split(";")[0])
-        .filter((x: string) => x!!);
-
-    let noComents = []
-    for (let line of gcodes) {
-        while (line.indexOf("(") != -1) {
-            let start = line.indexOf("(");
-            let end = line.indexOf(")");
-            line = line.slice(0, start) + line.slice(end + 1)
-        }
-        noComents.push(line);
-    }
-
-    if (!remove_comments) {
-        noComents = gcodes;
-    }
-
-    return noComents
-        .map((x: string) => x.replace(/\s/g, ''))
-        .filter((x: string) => x!!)
-        .join("\n");
-}
-
-function createLexer() {
-    const command = chevrotain.createToken({ name: "command", pattern: /[G,M,T,S]\d+(\.\d)?/ });
-    const parameter = chevrotain.createToken({ name: "parameter", pattern: /[A,B,C,D,F,I,J,K,P,Q,R,U,V,W,X,Y,Z]\-?\d*(\.\d*)?/ });
-    const lables = chevrotain.createToken({ name: "label", pattern: /[N,O]\d+/ });
-    const expression_1 = chevrotain.createToken({ name: "expression", pattern: /[A-Z][A-Z]+.*/ });
-    const expression_2 = chevrotain.createToken({ name: "expression", pattern: /.*#.*/ });
-    const comment = chevrotain.createToken({ name: "expression", pattern: /\([A-Z]+\)/ });
-
-    const allTokens = [
-        expression_1,
-        expression_2,
-        lables,
-        command,
-        parameter,
-        comment,
-    ]
-    let lexer = new chevrotain.Lexer(allTokens, {
-        positionTracking: "onlyOffset"
-    })
-    return lexer;
-}
-
-export function parseLines(p: string): Line[] {
-    const prog = p;
-    const inputTexts = prog.split("\n");
-    const lexer = createLexer();
-    const res: Line[] = []
-    for (let input of inputTexts) {
-        const lexingResult: LexingResult = lexer.tokenize(input);
-        lexingResult.tokens.forEach((x: Token) => {
-            let image = x.image;
-            if (x.tokenType.name === "command") {
-                let nr = +(image.slice(1))
-                image = image[0] + nr.toString();
-                x.image = image;
-            }
-        });
-        const line: Line = { line: input, tokens: lexingResult.tokens };
-        res.push(line);
-    }
-    return res;
-}
+import {preprocess, parseLines} from "./lexer";
+import { ceilOffTo, zeroPad, inesertBefore, inesertAfter } from "./utils";
 
 export function parseGcode(progStr: string): Routine {
     let preProcessed = preprocess(progStr);
@@ -180,46 +108,11 @@ export function getBiggest(prog: Routine): [number, number] { //var, lable
     return [variableNum, lineNum]; //TODO implement this
 }
 
-export function insertCustomGcodeBefore(prog: Routine, code: string, t: BlockType): Routine {
-    let customBlock = new LoopStartBlock(parseLines(preprocess(code)));
-    if (code)
-        prog = inesertBefore(prog, customBlock, t);
-    return prog;
-}
-
-export function insertCustomGcodeAfter(prog: Routine, code: string, t: BlockType): Routine {
-    let customBlock = new LoopStartBlock(parseLines(preprocess(code)));
-    if (code)
-        prog = inesertAfter(prog, customBlock, t);
-    return prog;
-}
-
-export function inesertAfter(prog: Routine, block: Block, afterType: BlockType): Routine {
-    let blocks: Block[] = prog.blocks
-        .map((b: Block) => (b.type === afterType) ? [b, block] : [b])
-        .flat();
-    prog.blocks = blocks;
-    return prog;
-}
-
-export function inesertBefore(prog: Routine, block: Block, beforeType: BlockType): Routine {
-    let blocks: Block[] = prog.blocks
-        .map((b: Block) => (b.type === beforeType) ? [block, b] : [b])
-        .flat();
-    prog.blocks = blocks;
-    return prog;
-}
 
 export function multiply(prog: Routine, amountX: number, amountY: number, pitchX: number, pitchY: number): Routine {
-    const zeroPad = (num: number, places: number) => String(num).padStart(places, '0')
-    const roundOffTo = (num, factor = 1) => {
-        const quotient = num / factor;
-        const res = Math.ceil(quotient) * factor;
-        return res;
-    };
 
     let [nextVar, nextLabel] = getBiggest(prog);
-    nextLabel = roundOffTo(nextLabel, 1000);
+    nextLabel = ceilOffTo(nextLabel, 1000);
 
     let yCounter = zeroPad(nextVar++, 1);
     let xCounter = zeroPad(nextVar++, 1);
@@ -242,7 +135,6 @@ export function multiply(prog: Routine, amountX: number, amountY: number, pitchX
         `IF[#${xCounter}LT${amountX}]GOTO(PLACE_HOLDER)\n` +
         `#${yCounter}=[#${yCounter}+1]\n` +
         `IF[#${yCounter}LT${amountY}]GOTO(PLACE_HOLDER)\n`;
-
 
     let loopBeginBlock = new LoopStartBlock(parseLines(preprocess(startLoop, false)));
     loopBeginBlock.line = loopY;

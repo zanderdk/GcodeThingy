@@ -1,5 +1,6 @@
 export type Token = chevrotain.IToken;
 export type LexingResult = chevrotain.ILexingResult;
+
 export class Line {
     line: string;
     tokens: Token[];
