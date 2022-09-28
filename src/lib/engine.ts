@@ -55,12 +55,12 @@ function createLexer() {
     const comment = chevrotain.createToken({ name: "expression", pattern: /\([A-Z]+\)/ });
 
     const allTokens = [
-        comment,
         expression_1,
         expression_2,
         lables,
         command,
-        parameter
+        parameter,
+        comment,
     ]
     let lexer = new chevrotain.Lexer(allTokens, {
         positionTracking: "onlyOffset"
