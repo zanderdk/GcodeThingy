@@ -22,6 +22,7 @@
     let selectedMacro: MacroType = 1;
 
     let content: string = "";
+    let oldContent: string = "";
 
     $: routine = content.trim()
         ? outputUpdate(
@@ -52,8 +53,37 @@
         _afterLoopCode: string,
         _selectedMacro: MacroType
     ): Routine {
-        let gcode = [_content]
-            .map(parseGcode)
+        if (_content != oldContent) {
+            oldContent = _content;
+            let gcode = [_content]
+                .map(parseGcode)
+                .map((gc) =>
+                    multiply(
+                        gc,
+                        _xAmount,
+                        _yAmount,
+                        _xPitch,
+                        _yPitch,
+                        _selectedMacro
+                    )
+                )
+                .map((gc) =>
+                    insertCustomGcodeAfter(
+                        gc,
+                        _beforeLoopCode,
+                        BlockType.LoopStart
+                    )
+                )
+                .map((gc) =>
+                    insertCustomGcodeBefore(
+                        gc,
+                        _afterLoopCode,
+                        BlockType.LoopEnd
+                    )
+                )[0];
+            return gcode;
+        }
+        let gcode = [routine]
             .map((gc) =>
                 multiply(
                     gc,
@@ -61,7 +91,8 @@
                     _yAmount,
                     _xPitch,
                     _yPitch,
-                    _selectedMacro
+                    _selectedMacro,
+                    true
                 )
             )
             .map((gc) =>
@@ -70,7 +101,6 @@
             .map((gc) =>
                 insertCustomGcodeBefore(gc, _afterLoopCode, BlockType.LoopEnd)
             )[0];
-
         return gcode;
     }
 </script>

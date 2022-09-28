@@ -115,7 +115,8 @@ export function multiply(prog: Routine,
     amountY: number,
     pitchX: number,
     pitchY: number,
-    macroType: MacroType = MacroType.MACRO_B): Routine {
+    macroType: MacroType = MacroType.MACRO_B,
+    update: boolean = false): Routine {
 
     let [nextVar, nextLabel] = getBiggest(prog);
     nextLabel = ceilOffTo(nextLabel, 1000);
@@ -124,6 +125,13 @@ export function multiply(prog: Routine,
     let xCounter = zeroPad(nextVar++, 1);
     let tmpY = zeroPad(nextVar++, 1);
     let tmpX = zeroPad(nextVar++, 1);
+
+    if (update) {
+        prog.blocks = prog.blocks.
+            filter((b: Block) => b.type !== BlockType.LoopStart &&
+                                            b.type !== BlockType.LoopEnd &&
+                                            b.type !== BlockType.Custom);
+    }
 
     let loopY = nextLabel;
 
@@ -179,6 +187,9 @@ export function multiply(prog: Routine,
 
     prog = inesertBefore(prog, loopBeginBlock, BlockType.Basic);
     prog = inesertAfter(prog, loopEndBlock, BlockType.Basic);
+
+    if (update)
+        return prog;
 
     //insert gcode last in startBlock
     for (let block of prog.blocks) {
