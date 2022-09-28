@@ -3,12 +3,15 @@
     import obsidian from "svelte-highlight/styles/obsidian";
     import InputComponent from "./lib/InputComponent.svelte";
     import OutputComponent from "./lib/OutputComponent.svelte";
-    import {
-        parseGcode,
-        multiply,
-    } from "./lib/engine";
+    import { parseGcode, multiply } from "./lib/engine";
     import { BlockType, Routine, MacroType } from "./lib/types";
-    import {insertCustomGcodeBefore, insertCustomGcodeAfter} from "./lib/utils";
+    import {
+        insertCustomGcodeBefore,
+        insertCustomGcodeAfter,
+    } from "./lib/utils";
+    import gcode from "svelte-highlight/languages/typescript";
+    import Highlight from "svelte-highlight";
+    import { Column, Grid, Row } from "carbon-components-svelte";
 
     let xPitch: number = 25;
     let yPitch: number = 25;
@@ -20,9 +23,20 @@
 
     let content: string = "";
 
-    $: routine = (content.trim())? outputUpdate(content, xAmount, yAmount, xPitch, yPitch, beforeLoopCode, afterLoopCode, selectedMacro) : null;
-    $: (!routine)? 0 : console.debug("generated:", routine);
-
+    $: routine = content.trim()
+        ? outputUpdate(
+              content,
+              xAmount,
+              yAmount,
+              xPitch,
+              yPitch,
+              beforeLoopCode,
+              afterLoopCode,
+              selectedMacro
+          )
+        : null;
+    $: !routine ? 0 : console.debug("generated:", routine);
+    $: originalCode = content.trim() ? parseGcode(content) : null;
 
     function onChange(e: CustomEvent<string>) {
         content = e.detail;
@@ -40,7 +54,16 @@
     ): Routine {
         let gcode = [_content]
             .map(parseGcode)
-            .map((gc) => multiply(gc, _xAmount, _yAmount, _xPitch, _yPitch, _selectedMacro))
+            .map((gc) =>
+                multiply(
+                    gc,
+                    _xAmount,
+                    _yAmount,
+                    _xPitch,
+                    _yPitch,
+                    _selectedMacro
+                )
+            )
             .map((gc) =>
                 insertCustomGcodeAfter(gc, _beforeLoopCode, BlockType.LoopStart)
             )
@@ -68,7 +91,23 @@
         bind:selectedMacro
         on:change={onChange}
     />
-    <OutputComponent bind:routine />
+    <Grid>
+        <Row>
+            <Column>
+                {#if originalCode}
+                    <h2 style="padding-bottom: 1.5rem;">Input</h2>
+                    <OutputComponent bind:routine={originalCode} />
+                {/if}
+            </Column>
+
+            <Column>
+                {#if routine}
+                    <h2 style="padding-bottom: 1.5rem;">Output</h2>
+                    <OutputComponent bind:routine />
+                {/if}
+            </Column>
+        </Row>
+    </Grid>
 </main>
 
 <style>

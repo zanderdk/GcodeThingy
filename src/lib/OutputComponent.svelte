@@ -48,7 +48,6 @@
 </script>
 
 {#if code}
-    <h2 style="padding-bottom: 1.5rem;">Output</h2>
     <ButtonSet>
         <Button kind="primary" on:click={(e) => downloadGcode()}
             ><Fa icon={faDownload} /> Download</Button
