@@ -16,7 +16,7 @@ import {
 } from "./types";
 
 import { preprocess, parseLines } from "./lexer";
-import { ceilOffTo, zeroPad, inesertBefore, inesertAfter } from "./utils";
+import { ceilOffTo, zeroPad } from "./utils";
 
 export function parseGcode(progStr: string): Routine {
     let preProcessed = preprocess(progStr);
@@ -81,7 +81,7 @@ export function splitBlocks(lines: Line[]): Routine {
             let image: string = token.image;
             if (image[0] === "T") { //start toolchange
                 stack = [];
-                while(_.last(cur_block.lines).line[0] == "M") {
+                while (_.last(cur_block.lines).line[0] == "M") {
                     let last = cur_block.lines.pop();
                     stack.unshift(last);
                 }
@@ -116,7 +116,6 @@ export function getBiggest(prog: Routine): [number, number] { //var, lable
     return [variableNum, lineNum]; //TODO implement this
 }
 
-
 export function multiply(prog: Routine,
     amountX: number,
     amountY: number,
@@ -136,64 +135,66 @@ export function multiply(prog: Routine,
     if (update) {
         prog.blocks = prog.blocks.
             filter((b: Block) => b.type !== BlockType.LoopStart &&
-                                            b.type !== BlockType.LoopEnd &&
-                                            b.type !== BlockType.Custom);
+                b.type !== BlockType.LoopEnd &&
+                b.type !== BlockType.Custom);
     }
 
-    let loopY = nextLabel;
-
-    let startLoop: string =
-        `#${yCounter}=0\n` +
-        `N(PLACE_HOLDER)\n` +
-        `#${tmpY}=[#${yCounter}*${pitchY}]\n` +
-        `#${xCounter}=0\n` +
-        `N(PLACE_HOLDER)\n` +
-        `#${tmpX}=[#${xCounter}*${pitchX}]\n` +
-        `G52X#${tmpX}Y#${tmpY}\n`;
-
-    let endLoop: string =
-        `#${xCounter}=[#${xCounter}+1]\n` +
-        `IF[#${xCounter}LT${amountX}]GOTO(PLACE_HOLDER)\n` +
-        `#${yCounter}=[#${yCounter}+1]\n` +
-        `IF[#${yCounter}LT${amountY}]GOTO(PLACE_HOLDER)\n`;
-
-    if (macroType == MacroType.MACRO_A) {
-        startLoop =
+    let getLoopsMacroA = () => {
+        let label1: string = zeroPad(nextLabel++, 4);
+        let label2: string = zeroPad(nextLabel++, 4);
+        let startLoop =
             `G65 H01 P${yCounter} Q0\n` +
-            `N(PLACE_HOLDER)\n` +
+            `N${label1}\n` +
             `G65 H01 P#${tmpY} Q#${yCounter}\n` +
             `G65 H04 P#${tmpY} Q#${tmpY} R${pitchY}\n` +
             `G65 H01 P${xCounter} Q0\n` +
-            `N(PLACE_HOLDER)\n` +
+            `N${label2}\n` +
             `G65 H01 P#${tmpX} Q#${xCounter}\n` +
             `G65 H04 P#${tmpX} Q#${tmpX} R${pitchX}\n` +
             `G52X#${tmpX}Y#${tmpY}\n`;
 
-        endLoop =
+        let endLoop =
             `G65 H02 P#${xCounter} Q#${xCounter} R1\n` +
-            `G65 H84 P(PLACE_HOLDER) Q#${xCounter} R${amountX}\n` +
+            `G65 H84 P${label2} Q#${xCounter} R${amountX}\n` +
             `G65 H02 P#${yCounter} Q#${yCounter} R1\n` +
-            `G65 H84 P(PLACE_HOLDER) Q#${yCounter} R${amountY}\n`;
+            `G65 H84 P${label1} Q#${yCounter} R${amountY}\n`;
+
+        return [startLoop, endLoop];
     }
 
-    let loopBeginBlock = new LoopStartBlock(parseLines(preprocess(startLoop, false)));
-    loopBeginBlock.lineNumber = loopY;
-    loopBeginBlock.placholderFunc = (b: LoopStartBlock, l: Line) => {
-        let ret: string = l.line.replace("(PLACE_HOLDER)", zeroPad(b.lineNumber, 4));
-        b.lineNumber += 1;
-        return ret;
+    let getLoopsMacroB = () => {
+        let label1: string = zeroPad(nextLabel++, 4);
+        let label2: string = zeroPad(nextLabel++, 4);
+        let startLoop: string =
+            `#${yCounter}=0\n` +
+            `N${label1}\n` +
+            `#${tmpY}=[#${yCounter}*${pitchY}]\n` +
+            `#${xCounter}=0\n` +
+            `N${label2}\n` +
+            `#${tmpX}=[#${xCounter}*${pitchX}]\n` +
+            `G52X#${tmpX}Y#${tmpY}\n`;
+
+        let endLoop: string =
+            `#${xCounter}=[#${xCounter}+1]\n` +
+            `IF[#${xCounter}LT${amountX}]GOTO${label2}\n` +
+            `#${yCounter}=[#${yCounter}+1]\n` +
+            `IF[#${yCounter}LT${amountY}]GOTO${label1}\n`;
+
+        return [startLoop, endLoop];
     }
 
-    let loopEndBlock = new LoopEndBlock(parseLines(preprocess(endLoop, false)));
-    loopEndBlock.lineNumber = loopY;
-    loopEndBlock.placholderFunc = (b: LoopStartBlock, l: Line) => {
-        let ret: string = l.line.replace("(PLACE_HOLDER)", zeroPad(b.lineNumber ^ 1, 4));
-        b.lineNumber += 1;
-        return ret;
-    }
+    let arr: any[] = _.clone(prog.blocks);
 
-    prog = inesertBefore(prog, loopBeginBlock, BlockType.Basic);
-    prog = inesertAfter(prog, loopEndBlock, BlockType.Basic);
+    arr.forEach((b: Block, i: number) => {
+        if (b.type == BlockType.Basic) {
+            let [startLoop, endLoop] = (macroType == MacroType.MACRO_A) ? getLoopsMacroA() : getLoopsMacroB();
+            let loopBeginBlock = new LoopStartBlock(parseLines(preprocess(startLoop, false)));
+            let loopEndBlock = new LoopEndBlock(parseLines(preprocess(endLoop, false)));
+            arr[i] = [loopBeginBlock, b, loopEndBlock];
+        }
+    });
+
+    prog.blocks = arr.flat()
 
     if (update)
         return prog;

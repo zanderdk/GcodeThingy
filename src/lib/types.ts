@@ -18,8 +18,6 @@ export class Line {
     }
 }
 
-export type PlacholderFunction = (b: Block, l: Line) => string;
-
 export enum BlockType {
     NullType = 0,
     Start,
@@ -33,27 +31,17 @@ export enum BlockType {
 export class Block {
     type: BlockType = 0;
     lines: Line[];
-    placholderFunc: PlacholderFunction | null;
 
     constructor(l: Line[] = []) {
         this.lines = l;
     }
 
     public toString(): string {
-        const hashPlaceHolder = (l: Line) => { return l.line.includes("(PLACE_HOLDER)") };
         let st: string = "";
 
         for (let line of this.lines) {
-            if (hashPlaceHolder(line)) {
-                if (!this.placholderFunc) {
-                    throw new Error(`No placeholder func to correct line ${line.line}`);
-                }
-
-                st += this.placholderFunc(this, line) + "\n";
-                continue;
-            }
             if (line.line.trim())
-                st += line.line + "\n";
+                st += line.line.trim() + "\n";
         }
         return st;
     }
@@ -100,7 +88,7 @@ export class Routine {
             this.blocks
                 .map((b: Block) => b.toString())
                 .join("\n") +
-            "%"
+            "%";
     }
 
     constructor(n: string | null = null, b: Block[] = []) {
