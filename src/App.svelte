@@ -126,11 +126,15 @@
     <Grid>
         <Row>
             <Column>
+                {#if originalCode}
                 <h2 style="padding-bottom: 1.5rem;">Input</h2>
+                {/if}
                 <OutputComponent bind:routine={originalCode} />
             </Column>
             <Column>
+                {#if routine}
                 <h2 style="padding-bottom: 1.5rem;">Output</h2>
+                {/if}
                 <OutputComponent bind:routine />
             </Column>
         </Row>
