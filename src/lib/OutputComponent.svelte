@@ -1,3 +1,6 @@
+<script lang="ts" context="module">
+</script>
+
 <script lang="ts">
     import Fa from "svelte-fa";
     import { faDownload, faCopy } from "@fortawesome/free-solid-svg-icons";
@@ -7,14 +10,24 @@
         ComposedModal,
         ModalHeader,
     } from "carbon-components-svelte";
-    import gcode from "svelte-highlight/languages/typescript";
-    import Highlight from "svelte-highlight";
-    import { Routine } from "./types";
+    import type { Routine } from "./types";
+    import { onMount } from "svelte";
+ // import './prism';
+    import "./prism.css";
+    import Prism from 'prismjs';
+    import 'prismjs/components/prism-gcode';
+    import 'prismjs/plugins/line-numbers/prism-line-numbers.js';
+    import 'prismjs/plugins/line-numbers/prism-line-numbers.css';
 
-    let modalOpen = false;
+    function main() {
+    }
+
+    onMount(main);
+
+   let modalOpen = false;
 
     export let routine: Routine | null = null;
-    $: code = routine ? routine.toString() : "";
+    $: code = routine ? "\n" + routine.toString().trim() : "";
 
     let modalText = "";
 
@@ -55,6 +68,12 @@
         }
         download("output.nc", code);
     }
+
+    function onInput(e) {
+         const editable = document.getElementById("editable");
+        console.log(editable);
+    }
+
 </script>
 
 {#if code}
@@ -67,9 +86,20 @@
         >
     </ButtonSet>
     <br />
-    <Highlight language={gcode} {code} />
+        <pre
+            class="line-numbers"
+            style="background-color: #222222;"
+        >
+            {@html Prism.highlight(code, Prism.languages.gcode, 'gcode')}
+        </pre>
 {/if}
 
 <ComposedModal bind:open={modalOpen}>
     <ModalHeader title={modalText} />
 </ComposedModal>
+
+<style>
+  pre {
+    white-space: pre-wrap;
+  }
+</style>
