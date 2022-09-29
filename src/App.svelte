@@ -1,6 +1,5 @@
 <script lang="ts">
     import "carbon-components-svelte/css/g90.css";
-    import obsidian from "svelte-highlight/styles/obsidian";
     import InputComponent from "./lib/InputComponent.svelte";
     import OutputComponent from "./lib/OutputComponent.svelte";
     import { parseGcode, multiply } from "./lib/engine";
@@ -9,8 +8,6 @@
         insertCustomGcodeBefore,
         insertCustomGcodeAfter,
     } from "./lib/utils";
-    import gcode from "svelte-highlight/languages/typescript";
-    import Highlight from "svelte-highlight";
     import { Column, Grid, Row } from "carbon-components-svelte";
 
     let xPitch: number = 25;
@@ -105,11 +102,12 @@
         console.debug("updating:", gcode);
         return gcode;
     }
-</script>
 
-<svelte:head>
-    {@html obsidian}
-</svelte:head>
+    function codeChange (e: CustomEvent<string> ) {
+        content = e.detail;
+    }
+
+</script>
 
 <main style="">
     <h2 style="padding-bottom: 1.5rem;">Settings</h2>
@@ -129,7 +127,7 @@
                 {#if originalCode}
                 <h2 style="padding-bottom: 1.5rem;">Input</h2>
                 {/if}
-                <OutputComponent bind:routine={originalCode} />
+                <OutputComponent on:change={codeChange} bind:routine={originalCode} />
             </Column>
             <Column>
                 {#if routine}

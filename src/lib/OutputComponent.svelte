@@ -11,23 +11,37 @@
         ModalHeader,
     } from "carbon-components-svelte";
     import type { Routine } from "./types";
-    import { onMount } from "svelte";
- // import './prism';
-    import "./prism.css";
-    import Prism from 'prismjs';
+    import { afterUpdate } from "svelte";
+    import CodeEditor from 'svelte-code-editor';
+    import { createEventDispatcher } from "svelte";
     import 'prismjs/components/prism-gcode';
-    import 'prismjs/plugins/line-numbers/prism-line-numbers.js';
-    import 'prismjs/plugins/line-numbers/prism-line-numbers.css';
 
-    function main() {
+    const dispatch = createEventDispatcher<{change: string}>();
+    interface $$Events {
+        change: CustomEvent<string>;
     }
 
-    onMount(main);
+    async function updateFunc() {
+        let boxes: any[] = document.querySelectorAll('.codejar-linenumbers');
+        console.log(boxes);
+        boxes.forEach(box => {
+            box.style.width = '65px';
+        });
 
-   let modalOpen = false;
+        boxes = document.querySelectorAll('pre');
+
+        boxes.forEach(box => {
+            box.style['padding-left'] = '80px';
+        });
+        console.log(boxes);
+    }
+
+    afterUpdate(updateFunc);
+
+    let modalOpen = false;
 
     export let routine: Routine | null = null;
-    $: code = routine ? "\n" + routine.toString().trim() : "";
+    $: code = routine ? routine.toString().trim() : "";
 
     let modalText = "";
 
@@ -69,9 +83,16 @@
         download("output.nc", code);
     }
 
-    function onInput(e) {
-         const editable = document.getElementById("editable");
-        console.log(editable);
+    let timer = null;
+    function codeChange(e: any) {
+        if (timer) {
+            clearTimeout(timer);
+        }
+        console.log("setting timer");
+        timer = setTimeout( () => {
+            console.log("time out");
+            dispatch("change", e.detail);
+        } , 2000);
     }
 
 </script>
@@ -86,20 +107,9 @@
         >
     </ButtonSet>
     <br />
-        <pre
-            class="line-numbers"
-            style="background-color: #222222;"
-        >
-            {@html Prism.highlight(code, Prism.languages.gcode, 'gcode')}
-        </pre>
+    <CodeEditor style="" lang="gcode" bind:code loc={true} tab="\t" on:change={codeChange} />
 {/if}
 
 <ComposedModal bind:open={modalOpen}>
     <ModalHeader title={modalText} />
 </ComposedModal>
-
-<style>
-  pre {
-    white-space: pre-wrap;
-  }
-</style>
