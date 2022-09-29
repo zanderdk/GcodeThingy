@@ -8,7 +8,7 @@
     "build": "vite build",
     "preview": "vite preview",
     "check": "svelte-check --tsconfig ./tsconfig.json",
-    "deploy": "npx gh-pages -d dist"
+    "deploy": "npm run build; npx gh-pages -d dist"
   },
   "devDependencies": {
     "@fortawesome/free-brands-svg-icons": "^6.2.0",
