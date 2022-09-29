@@ -75,12 +75,19 @@ export function splitStartAndEndBlock(prog: Routine): Routine {
 export function splitBlocks(lines: Line[]): Routine {
     let rest: Block[] = [];
     let cur_block: Block = new BasicBlock();
+    let stack: Line[] = null;
     for (let line of lines) {
         for (let token of line.tokens) {
             let image: string = token.image;
             if (image[0] === "T") { //start toolchange
+                stack = [];
+                while(_.last(cur_block.lines).line[0] == "M") {
+                    let last = cur_block.lines.pop();
+                    stack.unshift(last);
+                }
                 rest.push(cur_block);
                 cur_block = new ToolchangeBlock();
+                cur_block.lines.push(...stack);
             }
             else if ((image === "M3" || image === "M4") && cur_block.type == BlockType.Toolchange) {
                 cur_block.lines.push(line);
